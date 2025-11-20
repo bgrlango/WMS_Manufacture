@@ -1,0 +1,409 @@
+# Columns
+topline 	bill_of_materials	1	id	int	NO	NULL	auto_increment
+topline	bill_of_materials	2	parent_part_number	varchar	NO	NULL	
+topline	bill_of_materials	3	child_part_number	varchar	NO	NULL	
+topline	bill_of_materials	4	quantity_required	decimal	NO	NULL	
+topline	bill_of_materials	5	unit_of_measure	varchar	YES	'PCS'	
+topline	bill_of_materials	6	scrap_factor	decimal	YES	0.0000	
+topline	bill_of_materials	7	operation_sequence	int	YES	1	
+topline	bill_of_materials	8	is_active	tinyint	YES	1	
+topline	bill_of_materials	9	effective_date	date	NO	NULL	
+topline	bill_of_materials	10	expiry_date	date	YES	NULL	
+topline	bill_of_materials	11	created_at	timestamp	NO	current_timestamp()	
+topline	bill_of_materials	12	updated_at	timestamp	NO	current_timestamp()	on update current_timestamp()
+topline	delivery	1	id	int	NO	NULL	auto_increment
+topline	delivery	2	delivery_order	varchar	NO	NULL	
+topline	delivery	3	job_order	varchar	NO	NULL	
+topline	delivery	4	delivery_quantity	decimal	NO	NULL	
+topline	delivery	5	delivery_date	date	NO	NULL	
+topline	delivery	6	customer_name	varchar	NO	NULL	
+topline	delivery	7	remarks	text	YES	NULL	
+topline	delivery	8	user_id	int	YES	NULL	
+topline	delivery	9	created_at	timestamp	NO	current_timestamp()	
+topline	integration_queue	1	id	int	NO	NULL	auto_increment
+topline	integration_queue	2	queue_number	varchar	NO	NULL	
+topline	integration_queue	3	system_name	varchar	NO	NULL	
+topline	integration_queue	4	action_type	varchar	NO	NULL	
+topline	integration_queue	5	entity_type	varchar	NO	NULL	
+topline	integration_queue	6	entity_id	int	NO	NULL	
+topline	integration_queue	7	payload	longtext	YES	NULL	
+topline	integration_queue	8	status	enum	YES	'pending'	
+topline	integration_queue	9	priority	int	YES	5	
+topline	integration_queue	10	retry_count	int	YES	0	
+topline	integration_queue	11	max_retries	int	YES	3	
+topline	integration_queue	12	error_message	text	YES	NULL	
+topline	integration_queue	13	response_data	longtext	YES	NULL	
+topline	integration_queue	14	created_at	timestamp	NO	current_timestamp()	
+topline	integration_queue	15	processed_at	timestamp	YES	NULL	
+topline	integration_queue	16	next_retry_at	timestamp	YES	NULL	
+topline	inventory_balances	1	id	int	NO	NULL	auto_increment
+topline	inventory_balances	2	part_number	varchar	NO	NULL	
+topline	inventory_balances	3	location_id	int	NO	NULL	
+topline	inventory_balances	4	available_quantity	decimal	YES	0.000	
+topline	inventory_balances	5	reserved_quantity	decimal	YES	0.000	
+topline	inventory_balances	6	quarantine_quantity	decimal	YES	0.000	
+topline	inventory_balances	7	average_cost	decimal	YES	0.00	
+topline	inventory_balances	8	last_movement_date	timestamp	YES	NULL	
+topline	inventory_balances	9	last_count_date	timestamp	YES	NULL	
+topline	inventory_balances	10	created_at	timestamp	NO	current_timestamp()	
+topline	inventory_balances	11	updated_at	timestamp	NO	current_timestamp()	on update current_timestamp()
+topline	inventory_locations	1	id	int	NO	NULL	auto_increment
+topline	inventory_locations	2	location_code	varchar	NO	NULL	
+topline	inventory_locations	3	location_name	varchar	NO	NULL	
+topline	inventory_locations	4	location_type	enum	NO	NULL	
+topline	inventory_locations	5	warehouse_zone	varchar	YES	NULL	
+topline	inventory_locations	6	capacity	decimal	YES	NULL	
+topline	inventory_locations	7	current_utilization	decimal	YES	0.00	
+topline	inventory_locations	8	is_active	tinyint	YES	1	
+topline	inventory_locations	9	created_at	timestamp	NO	current_timestamp()	
+topline	inventory_locations	10	updated_at	timestamp	NO	current_timestamp()	on update current_timestamp()
+topline	inventory_movements	1	id	int	NO	NULL	auto_increment
+topline	inventory_movements	2	movement_number	varchar	NO	NULL	
+topline	inventory_movements	3	part_number	varchar	NO	NULL	
+topline	inventory_movements	4	movement_type	enum	NO	NULL	
+topline	inventory_movements	5	from_location_id	int	YES	NULL	
+topline	inventory_movements	6	to_location_id	int	YES	NULL	
+topline	inventory_movements	7	quantity	decimal	NO	NULL	
+topline	inventory_movements	8	unit_cost	decimal	YES	NULL	
+topline	inventory_movements	9	reference_type	enum	NO	NULL	
+topline	inventory_movements	10	reference_id	int	YES	NULL	
+topline	inventory_movements	11	reason_code	varchar	YES	NULL	
+topline	inventory_movements	12	notes	text	YES	NULL	
+topline	inventory_movements	13	user_id	int	NO	NULL	
+topline	inventory_movements	14	movement_date	timestamp	NO	current_timestamp()	
+topline	machines	1	id	int	NO	NULL	auto_increment
+topline	machines	2	machine_code	varchar	NO	NULL	
+topline	machines	3	machine_name	varchar	NO	NULL	
+topline	machines	4	machine_type	varchar	YES	NULL	
+topline	machines	5	location_id	int	YES	NULL	
+topline	machines	6	capacity_per_hour	decimal	YES	NULL	
+topline	machines	7	status	enum	YES	'active'	
+topline	machines	8	is_active	tinyint	YES	1	
+topline	machines	9	created_at	timestamp	NO	current_timestamp()	
+topline	machines	10	updated_at	timestamp	NO	current_timestamp()	on update current_timestamp()
+topline	master_prod	1	id	int	NO	NULL	auto_increment
+topline	master_prod	2	part_number	varchar	NO	NULL	
+topline	master_prod	3	description	text	YES	NULL	
+topline	master_prod	4	unit_of_measure	varchar	YES	'PCS'	
+topline	master_prod	5	standard_cost	decimal	YES	0.00	
+topline	master_prod	6	is_active	tinyint	YES	1	
+topline	master_prod	7	created_at	timestamp	NO	current_timestamp()	
+topline	master_prod	8	updated_at	timestamp	NO	current_timestamp()	on update current_timestamp()
+topline	oqc	1	id	int	NO	NULL	auto_increment
+topline	oqc	2	inspection_number	varchar	NO	NULL	
+topline	oqc	3	part_number	varchar	NO	NULL	
+topline	oqc	4	lot_number	varchar	NO	NULL	
+topline	oqc	5	production_order_id	int	YES	NULL	
+topline	oqc	6	quantity_received	decimal	NO	NULL	
+topline	oqc	7	quantity_inspected	decimal	NO	NULL	
+topline	oqc	8	quantity_good	decimal	NO	0.000	
+topline	oqc	9	quantity_ng	decimal	NO	0.000	
+topline	oqc	10	quantity_rework	decimal	NO	0.000	
+topline	oqc	11	inspection_type	enum	YES	'final'	
+topline	oqc	12	inspection_date	timestamp	NO	current_timestamp()	
+topline	oqc	13	inspector_id	int	NO	NULL	
+topline	oqc	14	inspection_location	varchar	YES	'OQC-AREA'	
+topline	oqc	15	overall_result	enum	YES	'pending'	
+topline	oqc	16	inspection_status	enum	YES	'pending'	
+topline	oqc	17	measurement_data	longtext	YES	NULL	
+topline	oqc	18	defect_details	longtext	YES	NULL	
+topline	oqc	19	inspector_notes	text	YES	NULL	
+topline	oqc	20	approved_by	int	YES	NULL	
+topline	oqc	21	approved_at	timestamp	YES	NULL	
+topline	oqc	22	approval_notes	text	YES	NULL	
+topline	oqc	23	disposition	enum	YES	NULL	
+topline	oqc	24	disposition_notes	text	YES	NULL	
+topline	oqc	25	created_at	timestamp	NO	current_timestamp()	
+topline	oqc	26	updated_at	timestamp	NO	current_timestamp()	on update current_timestamp()
+topline	output_mc	1	id	int	NO	NULL	auto_increment
+topline	output_mc	2	job_order	varchar	NO	NULL	
+topline	output_mc	3	actual_quantity	decimal	NO	NULL	
+topline	output_mc	4	ng_quantity	decimal	YES	0.00	
+topline	output_mc	5	shift	varchar	NO	NULL	
+topline	output_mc	6	operation_date	date	NO	NULL	
+topline	output_mc	7	created_at	timestamp	NO	current_timestamp()	
+topline	production_orders	1	id	int	NO	NULL	auto_increment
+topline	production_orders	2	job_order	varchar	NO	NULL	
+topline	production_orders	3	part_number	varchar	NO	NULL	
+topline	production_orders	4	plan_quantity	decimal	NO	NULL	
+topline	production_orders	5	machine_name	varchar	YES	NULL	
+topline	production_orders	6	start_date	date	NO	NULL	
+topline	production_orders	7	status	enum	YES	'running'	
+topline	production_orders	8	workflow_status	enum	YES	'planning'	
+topline	production_orders	9	created_at	timestamp	NO	current_timestamp()	
+topline	production_orders	10	updated_at	timestamp	NO	current_timestamp()	on update current_timestamp()
+topline	production_schedules	1	id	int	NO	NULL	auto_increment
+topline	production_schedules	2	schedule_number	varchar	NO	NULL	
+topline	production_schedules	3	production_order_id	int	NO	NULL	
+topline	production_schedules	4	machine_id	int	NO	NULL	
+topline	production_schedules	5	operator_id	int	YES	NULL	
+topline	production_schedules	6	scheduled_start	datetime	NO	NULL	
+topline	production_schedules	7	scheduled_end	datetime	NO	NULL	
+topline	production_schedules	8	actual_start	datetime	YES	NULL	
+topline	production_schedules	9	actual_end	datetime	YES	NULL	
+topline	production_schedules	10	status	enum	YES	'scheduled'	
+topline	production_schedules	11	priority	int	YES	5	
+topline	production_schedules	12	setup_time_minutes	int	YES	0	
+topline	production_schedules	13	estimated_runtime_minutes	int	YES	NULL	
+topline	production_schedules	14	actual_runtime_minutes	int	YES	NULL	
+topline	production_schedules	15	notes	text	YES	NULL	
+topline	production_schedules	16	created_by	int	NO	NULL	
+topline	production_schedules	17	created_at	timestamp	NO	current_timestamp()	
+topline	production_schedules	18	updated_at	timestamp	NO	current_timestamp()	on update current_timestamp()
+topline	purchase_orders	1	id	int	NO	NULL	auto_increment
+topline	purchase_orders	2	po_number	varchar	NO	NULL	
+topline	purchase_orders	3	supplier_id	int	NO	NULL	
+topline	purchase_orders	4	po_date	date	NO	NULL	
+topline	purchase_orders	5	expected_delivery_date	date	YES	NULL	
+topline	purchase_orders	6	status	enum	YES	'draft'	
+topline	purchase_orders	7	total_amount	decimal	YES	NULL	
+topline	purchase_orders	8	currency	varchar	YES	'IDR'	
+topline	purchase_orders	9	payment_terms	varchar	YES	NULL	
+topline	purchase_orders	10	delivery_address	text	YES	NULL	
+topline	purchase_orders	11	notes	text	YES	NULL	
+topline	purchase_orders	12	created_by	int	NO	NULL	
+topline	purchase_orders	13	approved_by	int	YES	NULL	
+topline	purchase_orders	14	approved_at	timestamp	YES	NULL	
+topline	purchase_orders	15	created_at	timestamp	NO	current_timestamp()	
+topline	purchase_orders	16	updated_at	timestamp	NO	current_timestamp()	on update current_timestamp()
+topline	qc_calibration_records	1	id	int	NO	NULL	auto_increment
+topline	qc_calibration_records	2	equipment_id	varchar	NO	NULL	
+topline	qc_calibration_records	3	equipment_name	varchar	NO	NULL	
+topline	qc_calibration_records	4	calibration_type	enum	NO	NULL	
+topline	qc_calibration_records	5	calibration_date	date	NO	NULL	
+topline	qc_calibration_records	6	next_calibration_date	date	NO	NULL	
+topline	qc_calibration_records	7	calibration_interval_months	int	YES	12	
+topline	qc_calibration_records	8	calibrated_by	varchar	NO	NULL	
+topline	qc_calibration_records	9	calibration_certificate	varchar	YES	NULL	
+topline	qc_calibration_records	10	pre_calibration_status	enum	NO	NULL	
+topline	qc_calibration_records	11	post_calibration_status	enum	NO	NULL	
+topline	qc_calibration_records	12	accuracy_specification	varchar	YES	NULL	
+topline	qc_calibration_records	13	actual_accuracy	varchar	YES	NULL	
+topline	qc_calibration_records	14	calibration_results	longtext	YES	NULL	
+topline	qc_calibration_records	15	notes	text	YES	NULL	
+topline	qc_calibration_records	16	status	enum	YES	'current'	
+topline	qc_calibration_records	17	created_at	timestamp	NO	current_timestamp()	
+topline	qc_calibration_records	18	updated_at	timestamp	NO	current_timestamp()	on update current_timestamp()
+topline	qc_defect_codes	1	id	int	NO	NULL	auto_increment
+topline	qc_defect_codes	2	defect_code	varchar	NO	NULL	
+topline	qc_defect_codes	3	defect_name	varchar	NO	NULL	
+topline	qc_defect_codes	4	defect_category	enum	NO	NULL	
+topline	qc_defect_codes	5	severity_level	enum	NO	NULL	
+topline	qc_defect_codes	6	description	text	YES	NULL	
+topline	qc_defect_codes	7	corrective_action_template	text	YES	NULL	
+topline	qc_defect_codes	8	is_active	tinyint	YES	1	
+topline	qc_defect_codes	9	created_at	timestamp	NO	current_timestamp()	
+topline	qc_inspection_plans	1	id	int	NO	NULL	auto_increment
+topline	qc_inspection_plans	2	plan_code	varchar	NO	NULL	
+topline	qc_inspection_plans	3	part_number	varchar	NO	NULL	
+topline	qc_inspection_plans	4	plan_name	varchar	NO	NULL	
+topline	qc_inspection_plans	5	inspection_type	enum	NO	NULL	
+topline	qc_inspection_plans	6	sampling_method	enum	YES	'statistical'	
+topline	qc_inspection_plans	7	sample_size	int	YES	1	
+topline	qc_inspection_plans	8	acceptance_criteria	longtext	YES	NULL	
+topline	qc_inspection_plans	9	inspection_points	longtext	YES	NULL	
+topline	qc_inspection_plans	10	required_tools	varchar	YES	NULL	
+topline	qc_inspection_plans	11	estimated_time_minutes	int	YES	30	
+topline	qc_inspection_plans	12	is_active	tinyint	YES	1	
+topline	qc_inspection_plans	13	created_by	int	NO	NULL	
+topline	qc_inspection_plans	14	created_at	timestamp	NO	current_timestamp()	
+topline	qc_inspection_plans	15	updated_at	timestamp	NO	current_timestamp()	on update current_timestamp()
+topline	qc_inspection_results	1	id	int	NO	NULL	auto_increment
+topline	qc_inspection_results	2	inspection_number	varchar	NO	NULL	
+topline	qc_inspection_results	3	qc_plan_id	int	NO	NULL	
+topline	qc_inspection_results	4	source_type	enum	NO	NULL	
+topline	qc_inspection_results	5	source_reference_id	int	YES	NULL	
+topline	qc_inspection_results	6	lot_number	varchar	NO	NULL	
+topline	qc_inspection_results	7	part_number	varchar	NO	NULL	
+topline	qc_inspection_results	8	quantity_inspected	decimal	NO	NULL	
+topline	qc_inspection_results	9	quantity_passed	decimal	YES	0.000	
+topline	qc_inspection_results	10	quantity_failed	decimal	YES	0.000	
+topline	qc_inspection_results	11	quantity_rework	decimal	YES	0.000	
+topline	qc_inspection_results	12	inspection_status	enum	YES	'pending'	
+topline	qc_inspection_results	13	overall_result	enum	YES	'pending'	
+topline	qc_inspection_results	14	inspector_id	int	NO	NULL	
+topline	qc_inspection_results	15	inspection_start_time	timestamp	YES	NULL	
+topline	qc_inspection_results	16	inspection_end_time	timestamp	YES	NULL	
+topline	qc_inspection_results	17	inspection_location	varchar	YES	NULL	
+topline	qc_inspection_results	18	measurement_data	longtext	YES	NULL	
+topline	qc_inspection_results	19	defect_codes	longtext	YES	NULL	
+topline	qc_inspection_results	20	corrective_actions	text	YES	NULL	
+topline	qc_inspection_results	21	inspector_notes	text	YES	NULL	
+topline	qc_inspection_results	22	approved_by	int	YES	NULL	
+topline	qc_inspection_results	23	approved_at	timestamp	YES	NULL	
+topline	qc_inspection_results	24	approval_notes	text	YES	NULL	
+topline	qc_inspection_results	25	created_at	timestamp	NO	current_timestamp()	
+topline	qc_inspection_results	26	updated_at	timestamp	NO	current_timestamp()	on update current_timestamp()
+topline	qc_non_conformance	1	id	int	NO	NULL	auto_increment
+topline	qc_non_conformance	2	ncr_number	varchar	NO	NULL	
+topline	qc_non_conformance	3	inspection_result_id	int	NO	NULL	
+topline	qc_non_conformance	4	ncr_type	enum	NO	NULL	
+topline	qc_non_conformance	5	part_number	varchar	NO	NULL	
+topline	qc_non_conformance	6	lot_number	varchar	NO	NULL	
+topline	qc_non_conformance	7	quantity_affected	decimal	NO	NULL	
+topline	qc_non_conformance	8	problem_description	text	NO	NULL	
+topline	qc_non_conformance	9	root_cause_analysis	text	YES	NULL	
+topline	qc_non_conformance	10	immediate_action	text	YES	NULL	
+topline	qc_non_conformance	11	corrective_action	text	YES	NULL	
+topline	qc_non_conformance	12	preventive_action	text	YES	NULL	
+topline	qc_non_conformance	13	ncr_status	enum	YES	'open'	
+topline	qc_non_conformance	14	priority	enum	YES	'medium'	
+topline	qc_non_conformance	15	reported_by	int	NO	NULL	
+topline	qc_non_conformance	16	assigned_to	int	YES	NULL	
+topline	qc_non_conformance	17	verified_by	int	YES	NULL	
+topline	qc_non_conformance	18	target_close_date	date	YES	NULL	
+topline	qc_non_conformance	19	actual_close_date	date	YES	NULL	
+topline	qc_non_conformance	20	cost_impact	decimal	YES	0.00	
+topline	qc_non_conformance	21	created_at	timestamp	NO	current_timestamp()	
+topline	qc_non_conformance	22	updated_at	timestamp	NO	current_timestamp()	on update current_timestamp()
+topline	return_customer	1	id	int	NO	NULL	auto_increment
+topline	return_customer	2	return_number	varchar	NO	NULL	
+topline	return_customer	3	job_order	varchar	NO	NULL	
+topline	return_customer	4	return_quantity	decimal	NO	NULL	
+topline	return_customer	5	return_date	date	NO	NULL	
+topline	return_customer	6	return_reason	varchar	YES	NULL	
+topline	return_customer	7	customer_name	varchar	NO	NULL	
+topline	return_customer	8	created_at	timestamp	NO	current_timestamp()	
+topline	stock_adjustment	1	id	int	NO	NULL	auto_increment
+topline	stock_adjustment	2	adjustment_number	varchar	NO	NULL	
+topline	stock_adjustment	3	part_number	varchar	NO	NULL	
+topline	stock_adjustment	4	location	varchar	YES	NULL	
+topline	stock_adjustment	5	adjustment_type	enum	NO	NULL	
+topline	stock_adjustment	6	quantity	decimal	NO	NULL	
+topline	stock_adjustment	7	reason	varchar	YES	NULL	
+topline	stock_adjustment	8	approved_by	int	YES	NULL	
+topline	stock_adjustment	9	adjustment_date	timestamp	NO	current_timestamp()	
+topline	stock_adjustment	10	created_at	timestamp	NO	current_timestamp()	
+topline	stock_fg	1	id	int	NO	NULL	auto_increment
+topline	stock_fg	2	part_number	varchar	NO	NULL	
+topline	stock_fg	3	description	varchar	YES	NULL	
+topline	stock_fg	4	location	varchar	YES	'FG-001'	
+topline	stock_fg	5	quantity	decimal	NO	0.00	
+topline	stock_fg	6	unit_cost	decimal	YES	0.00	
+topline	stock_fg	7	last_updated	timestamp	NO	current_timestamp()	on update current_timestamp()
+topline	stock_fg	8	created_at	timestamp	NO	current_timestamp()	
+topline	stock_take_history	1	id	int	NO	NULL	auto_increment
+topline	stock_take_history	2	stock_take_number	varchar	NO	NULL	
+topline	stock_take_history	3	part_number	varchar	NO	NULL	
+topline	stock_take_history	4	location	varchar	YES	NULL	
+topline	stock_take_history	5	book_quantity	decimal	NO	NULL	
+topline	stock_take_history	6	actual_quantity	decimal	NO	NULL	
+topline	stock_take_history	7	variance	decimal	YES	NULL	VIRTUAL GENERATED
+topline	stock_take_history	8	variance_percentage	decimal	YES	NULL	
+topline	stock_take_history	9	counted_by	int	YES	NULL	
+topline	stock_take_history	10	count_date	timestamp	NO	current_timestamp()	
+topline	stock_take_history	11	created_at	timestamp	NO	current_timestamp()	
+topline	stock_wip	1	id	int	NO	NULL	auto_increment
+topline	stock_wip	2	job_order	varchar	NO	NULL	
+topline	stock_wip	3	part_number	varchar	NO	NULL	
+topline	stock_wip	4	operation	varchar	YES	NULL	
+topline	stock_wip	5	quantity	decimal	NO	0.00	
+topline	stock_wip	6	machine_name	varchar	YES	NULL	
+topline	stock_wip	7	status	enum	YES	'pending'	
+topline	stock_wip	8	last_updated	timestamp	NO	current_timestamp()	on update current_timestamp()
+topline	stock_wip	9	created_at	timestamp	NO	current_timestamp()	
+topline	suppliers	1	id	int	NO	NULL	auto_increment
+topline	suppliers	2	supplier_code	varchar	NO	NULL	
+topline	suppliers	3	supplier_name	varchar	NO	NULL	
+topline	suppliers	4	contact_person	varchar	YES	NULL	
+topline	suppliers	5	email	varchar	YES	NULL	
+topline	suppliers	6	phone	varchar	YES	NULL	
+topline	suppliers	7	address	text	YES	NULL	
+topline	suppliers	8	city	varchar	YES	NULL	
+topline	suppliers	9	country	varchar	YES	'Indonesia'	
+topline	suppliers	10	tax_number	varchar	YES	NULL	
+topline	suppliers	11	payment_terms	varchar	YES	NULL	
+topline	suppliers	12	currency	varchar	YES	'IDR'	
+topline	suppliers	13	is_active	tinyint	YES	1	
+topline	suppliers	14	rating	decimal	YES	NULL	
+topline	suppliers	15	created_at	timestamp	NO	current_timestamp()	
+topline	suppliers	16	updated_at	timestamp	NO	current_timestamp()	on update current_timestamp()
+topline	system_configuration	1	id	int	NO	NULL	auto_increment
+topline	system_configuration	2	config_key	varchar	NO	NULL	
+topline	system_configuration	3	config_value	text	NO	NULL	
+topline	system_configuration	4	config_type	enum	YES	'string'	
+topline	system_configuration	5	description	text	YES	NULL	
+topline	system_configuration	6	is_editable	tinyint	YES	1	
+topline	system_configuration	7	category	varchar	YES	'general'	
+topline	system_configuration	8	created_at	timestamp	NO	current_timestamp()	
+topline	system_configuration	9	updated_at	timestamp	NO	current_timestamp()	on update current_timestamp()
+topline	transfer_qc	1	id	int	NO	NULL	auto_increment
+topline	transfer_qc	2	job_order	varchar	NO	NULL	
+topline	transfer_qc	3	transfer_quantity	decimal	NO	NULL	
+topline	transfer_qc	4	transfer_date	date	NO	NULL	
+topline	transfer_qc	5	qc_location	varchar	YES	NULL	
+topline	transfer_qc	6	remarks	text	YES	NULL	
+topline	transfer_qc	7	created_at	timestamp	NO	current_timestamp()	
+topline	users	1	id	int	NO	NULL	auto_increment
+topline	users	2	full_name	varchar	NO	NULL	
+topline	users	3	email	varchar	NO	NULL	
+topline	users	4	password	varchar	NO	NULL	
+topline	users	5	role	enum	NO	NULL	
+topline	users	6	department	varchar	YES	NULL	
+topline	users	7	is_active	tinyint	YES	1	
+topline	users	8	created_at	timestamp	NO	current_timestamp()	
+topline	users	9	updated_at	timestamp	NO	current_timestamp()	on update current_timestamp()
+topline	user_log	1	id	int	NO	NULL	auto_increment
+topline	user_log	2	user_id	int	NO	NULL	
+topline	user_log	3	action	varchar	NO	NULL	
+topline	user_log	4	table_name	varchar	YES	NULL	
+topline	user_log	5	record_id	int	YES	NULL	
+topline	user_log	6	ip_address	varchar	YES	NULL	
+topline	user_log	7	user_agent	text	YES	NULL	
+topline	user_log	8	created_at	timestamp	NO	current_timestamp()	
+topline	view_inventory_summary	1	part_number	varchar	NO	NULL	
+topline	view_inventory_summary	2	location_code	varchar	NO	NULL	
+topline	view_inventory_summary	3	location_name	varchar	NO	NULL	
+topline	view_inventory_summary	4	available_quantity	decimal	YES	0.000	
+topline	view_inventory_summary	5	reserved_quantity	decimal	YES	0.000	
+topline	view_inventory_summary	6	quarantine_quantity	decimal	YES	0.000	
+topline	view_inventory_summary	7	total_quantity	decimal	YES	NULL	
+topline	view_inventory_summary	8	average_cost	decimal	YES	0.00	
+topline	view_inventory_summary	9	inventory_value	decimal	YES	NULL	
+topline	view_inventory_summary	10	last_movement_date	timestamp	YES	NULL	
+topline	view_inventory_summary	11	last_count_date	timestamp	YES	NULL	
+topline	view_production_dashboard	1	id	int	NO	0	
+topline	view_production_dashboard	2	job_order	varchar	NO	NULL	
+topline	view_production_dashboard	3	part_number	varchar	NO	NULL	
+topline	view_production_dashboard	4	plan_quantity	decimal	NO	NULL	
+topline	view_production_dashboard	5	start_date	date	NO	NULL	
+topline	view_production_dashboard	6	status	enum	YES	'running'	
+topline	view_production_dashboard	7	workflow_status	enum	YES	'planning'	
+topline	view_production_dashboard	8	machine_id	int	YES	NULL	
+topline	view_production_dashboard	9	machine_name	varchar	YES	NULL	
+topline	view_production_dashboard	10	scheduled_start	datetime	YES	NULL	
+topline	view_production_dashboard	11	scheduled_end	datetime	YES	NULL	
+topline	view_production_dashboard	12	actual_start	datetime	YES	NULL	
+topline	view_production_dashboard	13	actual_end	datetime	YES	NULL	
+topline	view_production_dashboard	14	total_produced	decimal	YES	NULL	
+topline	view_production_dashboard	15	total_ng	decimal	YES	NULL	
+topline	view_production_dashboard	16	completion_percentage	decimal	YES	NULL	
+topline	view_supplier_performance	1	supplier_code	varchar	NO	NULL	
+topline	view_supplier_performance	2	supplier_name	varchar	NO	NULL	
+topline	view_supplier_performance	3	total_orders	bigint	NO	0	
+topline	view_supplier_performance	4	total_value	decimal	YES	NULL	
+topline	view_supplier_performance	5	completed_orders	bigint	NO	0	
+topline	view_supplier_performance	6	completion_rate_percentage	decimal	YES	NULL	
+topline	view_supplier_performance	7	rating	decimal	YES	NULL	
+topline	view_supplier_performance	8	is_active	tinyint	YES	1	
+topline	v_qc_summary	1	inspection_date	date	YES	NULL	
+topline	v_qc_summary	2	part_number	varchar	NO	NULL	
+topline	v_qc_summary	3	total_inspections	bigint	NO	0	
+topline	v_qc_summary	4	total_quantity_inspected	decimal	YES	NULL	
+topline	v_qc_summary	5	total_quantity_passed	decimal	YES	NULL	
+topline	v_qc_summary	6	total_quantity_failed	decimal	YES	NULL	
+topline	v_qc_summary	7	pass_rate_percentage	decimal	YES	NULL	
+topline	v_qc_summary	8	passed_lots	bigint	NO	0	
+topline	v_qc_summary	9	failed_lots	bigint	NO	0	
+topline	workflow_states	1	id	int	NO	NULL	auto_increment
+topline	workflow_states	2	entity_type	varchar	NO	NULL	
+topline	workflow_states	3	entity_id	int	NO	NULL	
+topline	workflow_states	4	workflow_name	varchar	NO	NULL	
+topline	workflow_states	5	current_state	varchar	NO	NULL	
+topline	workflow_states	6	previous_state	varchar	YES	NULL	
+topline	workflow_states	7	next_possible_states	longtext	YES	NULL	
+topline	workflow_states	8	state_data	longtext	YES	NULL	
+topline	workflow_states	9	changed_by	int	NO	NULL	
+topline	workflow_states	10	changed_at	timestamp	NO	current_timestamp()	
+topline	workflow_states	11	notes	text	YES	NULL	
+topline	workflow_states	12	is_active	tinyint	YES	1	
