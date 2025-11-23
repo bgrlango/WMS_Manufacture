@@ -48,7 +48,36 @@ function:
   
   # Environment Variables
   environment_variables:
+    # Application
     NODE_ENV: ${ENVIRONMENT:-production}
+    
+    # Path Configuration for Alibaba Cloud FC
+    CODE_DIR: /code
+    PYTHONPATH: /code:/code/app
+    PYTHONUNBUFFERED: "1"
+    PYTHONDONTWRITEBYTECODE: "1"
+    
+    # Function Compute Configuration
+    FC_FUNCTION_NAME: query-service
+    FC_HOST: 0.0.0.0
+    FC_PORT: "9000"
+    
+    # Library Paths (for native bindings)
+    LD_LIBRARY_PATH: /code/lib:/usr/local/lib:/usr/lib:/opt/fc/lib
+    
+    # Database (RDS MySQL in VPC)
+    DB_HOST: ${DB_HOST}
+    DB_PORT: ${DB_PORT:-3306}
+    DB_USER: ${DB_USER}
+    DB_PASSWORD: ${DB_PASSWORD}
+    DB_NAME: ${DB_NAME}
+    
+    # SQLAlchemy Configuration
+    DATABASE_URL: mysql+pymysql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}?charset=utf8mb4
+    SQLALCHEMY_ECHO: "false"
+    
+    # Logging
+    LOG_LEVEL: INFO
     
     # Database Configuration
     DB_HOST: ${DB_HOST}

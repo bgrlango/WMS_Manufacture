@@ -1,12 +1,26 @@
-# FastAPI custom runtime configuration
+# FastAPI custom runtime configuration for Alibaba Cloud Function Compute
 # Specifies the Python version and entry point
+# Supports both standard and Alibaba-specific deployment paths
 
 RUNTIME python39
 
-# Entry point with dynamic path resolution
+# Entry point for Function Compute
+# bootstrap.py handles dynamic path resolution for Alibaba FC environment
 ENTRYPOINT python /code/bootstrap.py
 
-# Environment variables for bootstrap
+# Environment variables for Alibaba Cloud Function Compute
 ENV CODE_DIR=/code
-ENV PYTHONPATH=/code
+ENV PYTHONPATH=/code:/code/app
 ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
+
+# Logging
+ENV LOG_LEVEL=INFO
+
+# Alibaba FC specific settings
+ENV FC_FUNCTION_NAME=query-service
+ENV FC_HOST=0.0.0.0
+ENV FC_PORT=9000
+
+# Library paths for native bindings (bcrypt, mysql2, etc)
+ENV LD_LIBRARY_PATH=/code/lib:/usr/local/lib:/usr/lib:/opt/fc/lib

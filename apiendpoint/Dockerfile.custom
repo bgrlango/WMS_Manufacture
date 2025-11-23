@@ -1,23 +1,26 @@
 FROM python:3.9-slim
 
-# Install system dependencies
+# Install system dependencies for Alibaba Cloud Function Compute
+# Includes libraries needed for native Python bindings
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     curl \
     git \
     ca-certificates \
+    libssl-dev \
+    libffi-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Set working directory
+# Set working directory (primary FC path)
 WORKDIR /code
 
-# Copy requirements FIRST
+# Copy requirements FIRST to leverage Docker layer caching
 COPY requirements.txt /code/requirements.txt
 
 # Install Python dependencies
 RUN pip install --no-cache-dir -r /code/requirements.txt
 
-# Copy application files
+# Copy application files to primary FC location
 COPY bootstrap.py /code/bootstrap.py
 COPY app/ /code/app/
 COPY config/ /code/config/
@@ -29,24 +32,44 @@ COPY schemas/ /code/schemas/
 COPY utils/ /code/utils/
 COPY api/ /code/api/
 
-# Verify bootstrap.py exists
-RUN if [ ! -f /code/bootstrap.py ]; then echo "ERROR: bootstrap.py not found!"; ls -la /code/; exit 1; fi
+# Create lib directory for potential native bindings
+RUN mkdir -p /code/lib
 
-# Set environment variables
+# Verify bootstrap.py exists
+RUN if [ ! -f /code/bootstrap.py ]; then \
+    echo "ERROR: bootstrap.py not found in /code/"; \
+    echo "Contents of /code:"; \
+    ls -la /code/; \
+    exit 1; \
+    fi && \
+    echo "✓ bootstrap.py verified at /code/bootstrap.py"
+
+# Verify app structure
+RUN if [ ! -d /code/app ] || [ ! -f /code/app/main.py ]; then \
+    echo "ERROR: app/main.py not found"; \
+    ls -la /code/; \
+    exit 1; \
+    fi && \
+    echo "✓ app/main.py verified"
+
+# Set environment variables for Alibaba Cloud FC
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     FC_FUNCTION_NAME=query-service \
     FC_PORT=9000 \
     FC_HOST=0.0.0.0 \
     CODE_DIR=/code \
-    PYTHONPATH=/code
+    PYTHONPATH=/code:/code/app \
+    LD_LIBRARY_PATH=/code/lib:/usr/local/lib:/usr/lib:/opt/fc/lib
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
   CMD curl -f http://localhost:9000/health || exit 1
 
-# Expose port
+# Expose port (for local testing)
 EXPOSE 9000
 
-# Use exec form to avoid shell issues
+# Entry point for Alibaba Cloud Function Compute
+# Uses exec form to avoid shell issues
+# bootstrap.py handles dynamic path resolution
 ENTRYPOINT ["python", "-u", "/code/bootstrap.py"]
