@@ -1,0 +1,110 @@
+ROSTemplateFormatVersion: '2015-06-01'
+Description: 'WMS Manufacturing - FastAPI Query Service on Alibaba Cloud Function Compute (Alibaba Fun Format)'
+
+Services:
+  wms-manufacturing-query:
+    Type: Aliyun::Serverless::Service
+    Properties:
+      ServiceName: wms-manufacturing-query
+      Description: WMS Manufacturing Query Service (FastAPI)
+      LogConfig:
+        LogStore: wms-query-logs
+        Project: wms-project
+      VpcConfig:
+        VpcId: !Ref VpcId
+        SecurityGroupId: !Ref SecurityGroupId
+        SubnetIds:
+          - !Ref SubnetId
+      InternetAccess: true
+
+    query-service:
+      Type: Aliyun::Serverless::Function
+      Properties:
+        FunctionName: query-service
+        Description: FastAPI Query Service (CQRS read operations)
+        Handler: function_compute_handler.http_handler
+        Runtime: custom
+        CodeUri: ./
+        Timeout: !Ref Timeout
+        MemorySize: !Ref MemorySize
+        EnvironmentVariables:
+          DB_HOST: !Ref DBHost
+          DB_PORT: !Ref DBPort
+          DB_USER: !Ref DBUser
+          DB_PASSWORD: !Ref DBPassword
+          DB_NAME: !Ref DBName
+          DATABASE_URL: !Sub 'mysql+pymysql://${DBUser}:${DBPassword}@${DBHost}:${DBPort}/${DBName}'
+          NODE_ENV: !Ref Environment
+          LOG_LEVEL: info
+        
+        # HTTP Trigger
+        Events:
+          http-trigger:
+            Type: HTTP
+            Properties:
+              AuthType: ANONYMOUS
+              Methods:
+                - GET
+                - POST
+                - OPTIONS
+
+Parameters:
+  VpcId:
+    Type: String
+    Description: VPC ID for Function Compute
+
+  SecurityGroupId:
+    Type: String
+    Description: Security group ID
+
+  SubnetId:
+    Type: String
+    Description: VSwitch subnet ID
+
+  DBHost:
+    Type: String
+    NoEcho: true
+    Description: RDS MySQL host
+
+  DBPort:
+    Type: Number
+    Default: 3306
+    Description: RDS MySQL port
+
+  DBUser:
+    Type: String
+    NoEcho: true
+    Description: Database user
+
+  DBPassword:
+    Type: String
+    NoEcho: true
+    Description: Database password
+
+  DBName:
+    Type: String
+    Default: wms_manufacture
+    Description: Database name
+
+  Timeout:
+    Type: Number
+    Default: 300
+    MinValue: 1
+    MaxValue: 900
+    Description: Function timeout in seconds
+
+  MemorySize:
+    Type: Number
+    Default: 1024
+    MinValue: 256
+    MaxValue: 3072
+    Description: Memory size in MB
+
+  Environment:
+    Type: String
+    Default: production
+    AllowedValues:
+      - development
+      - staging
+      - production
+    Description: Deployment environment

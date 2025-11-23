@@ -1,0 +1,61 @@
+FROM python:3.9-slim
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    curl \
+    git \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set working directory
+WORKDIR /code
+
+# Copy requirements
+COPY requirements.txt .
+
+# Install Python dependencies
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy application code
+COPY bootstrap.py /code/
+COPY app/ /code/app/
+COPY config/ /code/config/
+
+# Copy database files
+COPY database/ /code/database/
+
+# Copy get modules
+COPY get/ /code/get/
+
+# Copy middleware
+COPY middleware/ /code/middleware/
+
+# Copy models
+COPY models/ /code/models/
+
+# Copy schemas
+COPY schemas/ /code/schemas/
+
+# Copy utils
+COPY utils/ /code/utils/
+
+# Copy api endpoints
+COPY api/ /code/api/
+
+# Set environment
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    FC_FUNCTION_NAME=query-service \
+    FC_PORT=9000 \
+    FC_HOST=0.0.0.0
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD curl -f http://localhost:9000/health || exit 1
+
+# Expose port
+EXPOSE 9000
+
+# Entry point
+ENTRYPOINT ["python", "/code/bootstrap.py"]

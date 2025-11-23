@@ -1,0 +1,304 @@
+ROSTemplateFormatVersion: '2015-06-01'
+Description: 'WMS Manufacturing - Query Service (FastAPI) on Alibaba Cloud Function Compute'
+
+# Input parameters for deployment
+Parameters:
+  ServiceName:
+    Type: String
+    Default: wms-manufacturing-query
+    Description: Function Compute service name
+
+  FunctionName:
+    Type: String
+    Default: query-service
+    Description: Function Compute function name
+
+  DBHost:
+    Type: String
+    NoEcho: true
+    Description: RDS MySQL database host
+
+  DBPort:
+    Type: Number
+    Default: 3306
+    Description: RDS MySQL database port
+
+  DBUser:
+    Type: String
+    NoEcho: true
+    Description: Database username
+
+  DBPassword:
+    Type: String
+    NoEcho: true
+    Description: Database password
+
+  DBName:
+    Type: String
+    Default: wms_manufacture
+    Description: Database name
+
+  VpcId:
+    Type: String
+    Description: VPC ID for Function Compute
+
+  SecurityGroupId:
+    Type: String
+    Description: Security group ID for Function Compute
+
+  SubnetId:
+    Type: String
+    Description: VSwitch subnet ID for Function Compute
+
+  ImageUri:
+    Type: String
+    Default: registry.ap-southeast-5.aliyuncs.com/wms/query-service:latest
+    Description: Container image URI for custom runtime
+
+  MemorySize:
+    Type: Number
+    Default: 1024
+    MinValue: 256
+    MaxValue: 3072
+    Description: Memory size in MB
+
+  Timeout:
+    Type: Number
+    Default: 300
+    MinValue: 1
+    MaxValue: 900
+    Description: Function timeout in seconds
+
+  Environment:
+    Type: String
+    Default: production
+    AllowedValues:
+      - development
+      - staging
+      - production
+    Description: Deployment environment
+
+# Outputs
+Outputs:
+  ServiceArn:
+    Description: Function Compute service ARN
+    Value:
+      Fn::GetAtt:
+        - WMSQueryService
+        - ServiceArn
+
+  FunctionArn:
+    Description: Function Compute function ARN
+    Value:
+      Fn::GetAtt:
+        - WMSQueryFunction
+        - FunctionArn
+
+  HttpTriggerUrl:
+    Description: HTTP trigger endpoint URL
+    Value:
+      Fn::Sub: 'https://${ServiceId}.${Region}.fc.aliyuncs.com/api/v1'
+
+  DashboardUrl:
+    Description: Alibaba Cloud Console dashboard URL
+    Value:
+      Fn::Sub: 'https://fc.console.aliyun.com/fc/services/${WMSQueryService}/functions/${WMSQueryFunction}'
+
+# Resource definitions
+Resources:
+  # ===== Function Compute Service =====
+  WMSQueryService:
+    Type: Aliyun::FC::Service
+    Properties:
+      ServiceName:
+        Ref: ServiceName
+      Description: WMS Manufacturing Query Service (FastAPI) for read operations and dashboards
+      LogConfig:
+        LogStore: wms-query-logs
+        Project: wms-project
+        EnableRequestMetrics: true
+      VpcConfig:
+        VpcId:
+          Ref: VpcId
+        SecurityGroupId:
+          Ref: SecurityGroupId
+        SubnetIds:
+          - Ref: SubnetId
+      InternetAccess: true
+      RoleArn: acs:ram::ACCOUNT_ID:role/fc_basic_execution_role
+      Tags:
+        Project: WMS
+        Service: QueryService
+        Environment:
+          Ref: Environment
+
+  # ===== Function Compute Function =====
+  WMSQueryFunction:
+    Type: Aliyun::FC::Function
+    Properties:
+      ServiceName:
+        Ref: WMSQueryService
+      FunctionName:
+        Ref: FunctionName
+      Runtime: custom
+      Handler: function_compute_handler.http_handler
+      Timeout:
+        Ref: Timeout
+      MemorySize:
+        Ref: MemorySize
+      EphemeralStorage: 512
+      Description: CQRS Query Service handling read operations, dashboards, and reports
+      Code:
+        ImageUri:
+          Ref: ImageUri
+      EnvironmentVariables:
+        DB_HOST:
+          Ref: DBHost
+        DB_PORT:
+          Ref: DBPort
+        DB_USER:
+          Ref: DBUser
+        DB_PASSWORD:
+          Ref: DBPassword
+        DB_NAME:
+          Ref: DBName
+        DATABASE_URL:
+          Fn::Sub: 'mysql+pymysql://${DBUser}:${DBPassword}@${DBHost}:${DBPort}/${DBName}'
+        SQLALCHEMY_DATABASE_URL:
+          Fn::Sub: 'mysql+pymysql://${DBUser}:${DBPassword}@${DBHost}:${DBPort}/${DBName}'
+        NODE_ENV:
+          Ref: Environment
+        LOG_LEVEL: info
+        FC_FUNCTION_NAME:
+          Ref: FunctionName
+        FC_SERVICE_NAME:
+          Ref: ServiceName
+        ENABLE_REQUEST_LOGGING: 'true'
+        ENABLE_PERFORMANCE_METRICS: 'true'
+      PreserveOnDelete: false
+      Tags:
+        Function: query-service
+        CQRS: query-side
+
+  # ===== HTTP Trigger =====
+  WMSQueryHttpTrigger:
+    Type: Aliyun::FC::Trigger
+    Properties:
+      ServiceName:
+        Ref: WMSQueryService
+      FunctionName:
+        Fn::GetAtt:
+          - WMSQueryFunction
+          - FunctionName
+      TriggerName: http-trigger
+      TriggerType: http
+      TriggerConfig:
+        Methods:
+          - GET
+          - POST
+          - OPTIONS
+        AuthType: anonymous
+        Qualifier: LATEST
+      Description: HTTP trigger for RESTful read API endpoints
+
+  # ===== Async Event Trigger (Optional) =====
+  WMSQueryAsyncTrigger:
+    Type: Aliyun::FC::Trigger
+    Condition: EnableAsyncTriggers
+    Properties:
+      ServiceName:
+        Ref: WMSQueryService
+      FunctionName:
+        Fn::GetAtt:
+          - WMSQueryFunction
+          - FunctionName
+      TriggerName: async-event-trigger
+      TriggerType: sls_push
+      TriggerConfig:
+        SourceArn: acs:log:REGION:ACCOUNT_ID:project/wms-project
+        LogConfig:
+          Project: wms-project
+          LogStore: wms-events
+        FunctionParameter:
+          '{}'
+        Enabled: true
+      Description: Async event trigger for data change events
+
+  # ===== CloudMonitor Alarms =====
+  WMSQueryMetricsAlarm:
+    Type: Aliyun::CloudMonitor::Alarm
+    Properties:
+      AlarmName: wms-query-service-errors
+      MetricName: FunctionErrors
+      Namespace: acs/fc
+      Statistics: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 10
+      ComparisonOperator: GreaterThanThreshold
+      Dimensions:
+        - Name: ServiceName
+          Value:
+            Ref: ServiceName
+        - Name: FunctionName
+          Value:
+            Ref: FunctionName
+      AlarmActions:
+        - acs:cloudmonitor:REGION:ACCOUNT_ID:notificationChannel/sms/wms-alerts
+      TreatMissingData: NotBreaching
+
+  # ===== Reserved Concurrency Configuration =====
+  WMSQueryReservedConcurrency:
+    Type: Aliyun::FC::ProvisionedConcurrencyConfig
+    Properties:
+      ServiceName:
+        Ref: WMSQueryService
+      FunctionName:
+        Fn::GetAtt:
+          - WMSQueryFunction
+          - FunctionName
+      ProvisionedConcurrentExecutions: 10
+      Qualifier: LATEST
+      Description: Reserved capacity for production stability
+
+Conditions:
+  EnableAsyncTriggers:
+    Fn::Equals:
+      - Ref: Environment
+      - production
+
+# Metadata for CLI
+Metadata:
+  Manifest:
+    Version: '1.0'
+    Services:
+      - ServiceName: wms-manufacturing-query
+        Functions:
+          - FunctionName: query-service
+            Handler: function_compute_handler.http_handler
+            Runtime: custom
+            Policies:
+              - Version: '1'
+                Statement:
+                  - Effect: Allow
+                    Action:
+                      - 'fc:InvokeFunction'
+                    Resource:
+                      - 'acs:fc:*:*:services/wms-manufacturing-query/functions/query-service'
+                  - Effect: Allow
+                    Action:
+                      - 'rds:*'
+                    Resource:
+                      - 'acs:rds:*:*:db/*'
+                  - Effect: Allow
+                    Action:
+                      - 'logs:*'
+                    Resource:
+                      - 'acs:log:*:*:project/wms-project'
+            VpcConfig:
+              VpcId:
+                Ref: VpcId
+              SecurityGroupId:
+                Ref: SecurityGroupId
+              SubnetIds:
+                - Ref: SubnetId

@@ -1,0 +1,7 @@
+"""
+FastAPI custom runtime configuration
+Specifies the Python version and entry point
+"""
+
+RUNTIME python39
+ENTRYPOINT /code/bootstrap.py

@@ -15,7 +15,7 @@ Resources:
       Handler: 'function-compute-handler.handler'
       Runtime: 'custom'
       CodeUri: './'
-      MemorySize: 1024
+      MemorySize: 320
       Timeout: 300
       Environment:
         Variables:

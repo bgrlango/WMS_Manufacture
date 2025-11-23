@@ -1,0 +1,264 @@
+# Alibaba Cloud Function Compute Configuration - FastAPI Query Service
+# Location: .alibaba-fc.yml
+# Used by: fc (Function Compute CLI), fun (Alibaba Serverless Framework)
+
+region: ap-southeast-5
+account_id: ${ALIBABA_ACCOUNT_ID}
+
+# Service Configuration
+service:
+  name: wms-manufacturing-query
+  description: WMS Manufacturing Query Service - CQRS Query Side (FastAPI)
+  log_config:
+    log_store: wms-query-logs
+    project: wms-project
+    enable_request_metrics: true
+  
+  vpc_config:
+    vpc_id: ${VPC_ID}
+    security_group_id: ${SECURITY_GROUP_ID}
+    subnet_ids:
+      - ${SUBNET_ID}
+  
+  internet_access: true
+  role_arn: acs:ram::${ALIBABA_ACCOUNT_ID}:role/fc_basic_execution_role
+  
+  tags:
+    Project: WMS
+    Service: QueryService
+    Environment: ${ENVIRONMENT:-production}
+
+# Function Configuration
+function:
+  name: query-service
+  description: FastAPI Query Service - handles all read operations and dashboards
+  
+  # Runtime
+  runtime: custom
+  handler: function_compute_handler.http_handler
+  
+  # Resource Allocation
+  memory: 1024                          # MB (256-3072)
+  timeout: 300                          # seconds (1-900)
+  ephemeral_storage: 512                # MB
+  
+  # Code
+  code:
+    image_uri: ${IMAGE_URI}
+  
+  # Environment Variables
+  environment_variables:
+    NODE_ENV: ${ENVIRONMENT:-production}
+    
+    # Database Configuration
+    DB_HOST: ${DB_HOST}
+    DB_PORT: ${DB_PORT:-3306}
+    DB_USER: ${DB_USER}
+    DB_PASSWORD: ${DB_PASSWORD}
+    DB_NAME: ${DB_NAME:-wms_manufacture}
+    DATABASE_URL: mysql+pymysql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}
+    SQLALCHEMY_DATABASE_URL: mysql+pymysql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}
+    
+    # Database Pool Configuration
+    DB_POOL_SIZE: '5'
+    DB_MAX_OVERFLOW: '10'
+    DB_POOL_TIMEOUT: '30'
+    DB_POOL_RECYCLE: '3600'
+    
+    # Logging
+    LOG_LEVEL: ${LOG_LEVEL:-info}
+    ENABLE_REQUEST_LOGGING: 'true'
+    ENABLE_PERFORMANCE_METRICS: 'true'
+    LOG_RETENTION_DAYS: '30'
+    
+    # FastAPI Configuration
+    FASTAPI_ENV: ${ENVIRONMENT:-production}
+    DEBUG: 'false'
+    ALLOW_ORIGINS: ${CORS_ORIGIN:-*}
+    
+    # Function Compute Specific
+    FC_FUNCTION_NAME: query-service
+    FC_SERVICE_NAME: wms-manufacturing-query
+    FC_REQUEST_TIMEOUT: '300000'        # ms
+    FC_LOG_TYPE: tail
+
+# Trigger Configuration
+triggers:
+  # HTTP Trigger for RESTful API
+  - name: http-trigger
+    type: http
+    properties:
+      methods:
+        - GET
+        - POST
+        - OPTIONS
+      auth_type: anonymous               # or 'function' for JWT validation
+      qualifier: LATEST
+      cors:
+        allow_origins:
+          - ${CORS_ORIGIN:-*}
+        allow_methods:
+          - GET
+          - POST
+          - OPTIONS
+        allow_headers:
+          - Content-Type
+          - Authorization
+          - X-Requested-With
+        expose_headers:
+          - X-Request-Id
+          - X-Response-Time
+        allow_credentials: true
+        max_age: 86400
+    enabled: true
+
+# Provisioned Concurrency Configuration
+provisioned_concurrency:
+  enabled: ${ENABLE_PROVISIONED_CONCURRENCY:-true}
+  concurrent_executions: 10              # Keep 10 instances warm
+  on_demand_current: 0
+
+# Auto-scaling Configuration
+auto_scaling:
+  enabled: true
+  max_concurrent_executions: 100        # Maximum scaling limit
+  target_utilization: 70                 # Scale when 70% utilized
+  scale_up_cool_down_seconds: 60
+  scale_down_cool_down_seconds: 600
+
+# Monitoring & Alerting
+monitoring:
+  metrics_enabled: true
+  metrics_period_seconds: 60
+  
+  alarms:
+    # Error Rate Alarm
+    - name: high-error-rate
+      metric_name: FunctionErrors
+      statistics: Sum
+      period: 300
+      threshold: 10
+      comparison_operator: GreaterThanThreshold
+      evaluation_periods: 1
+      alarm_actions:
+        - sms
+        - email
+    
+    # High Duration Alarm
+    - name: high-duration
+      metric_name: FunctionDuration
+      statistics: Average
+      period: 300
+      threshold: 5000                    # milliseconds
+      comparison_operator: GreaterThanThreshold
+      evaluation_periods: 2
+    
+    # Database Connection Errors
+    - name: db-connection-errors
+      metric_name: DatabaseErrors
+      statistics: Sum
+      period: 300
+      threshold: 5
+      comparison_operator: GreaterThanThreshold
+      evaluation_periods: 1
+
+# Local Development Configuration
+local:
+  port: 8000                            # Port for local testing
+  host: 127.0.0.1
+  reload: true                          # Auto-reload on code changes
+  debug: ${DEBUG:-false}
+  
+  # Local database credentials
+  db_host: localhost
+  db_port: 3306
+  db_user: root
+  db_password: ${LOCAL_DB_PASSWORD}
+
+# CI/CD Configuration
+cicd:
+  github:
+    enabled: true
+    workflow_file: .github/workflows/deploy-fc-query.yml
+    trigger_on_push_to:
+      - main
+      - production
+
+# Rollback Configuration
+rollback:
+  enabled: true
+  keep_previous_versions: 5
+  auto_rollback_on_errors: true
+  rollback_on_alarm: true
+
+# Logging Configuration
+logging:
+  sls:
+    project: wms-project
+    log_store: wms-query-logs
+    enabled: true
+  request_id_header: X-Request-Id
+  enable_profiling: ${ENABLE_PROFILING:-false}
+
+# Backup & Disaster Recovery
+backup:
+  enabled: true
+  backup_frequency: daily
+  backup_retention_days: 30
+  backup_location: oss://wms-backups/fc-query/
+
+# Performance Tuning
+performance:
+  db_pool_size: 5
+  db_max_overflow: 10
+  request_body_max_size: 10485760       # 10 MB
+  timeout_buffer_ms: 5000
+  enable_caching: true
+  cache_ttl_seconds: 300
+
+---
+
+# Environment-Specific Overrides
+
+# Development Environment
+development:
+  region: ap-southeast-5
+  function:
+    memory: 256                         # Lower memory in dev
+    timeout: 60
+    environment_variables:
+      NODE_ENV: development
+      LOG_LEVEL: debug
+      DEBUG: 'true'
+      ENABLE_PROFILING: 'true'
+  
+  provisioned_concurrency:
+    enabled: false
+
+# Staging Environment
+staging:
+  region: ap-southeast-5
+  function:
+    memory: 512
+    timeout: 120
+  
+  provisioned_concurrency:
+    enabled: true
+    concurrent_executions: 5
+
+# Production Environment
+production:
+  region: ap-southeast-5
+  function:
+    memory: 1024
+    timeout: 300
+    environment_variables:
+      LOG_LEVEL: info
+      DEBUG: 'false'
+  
+  provisioned_concurrency:
+    enabled: true
+    concurrent_executions: 20
+  
+  auto_scaling:
+    max_concurrent_executions: 200
