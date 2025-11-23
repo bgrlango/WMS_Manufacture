@@ -1,7 +1,7 @@
 /**
  * CQRS COMMAND SERVICE (Node.js)
  * Handles: POST, PUT, DELETE operations only
- * Port: 8080
+ * Port: 3108
  */
 // Robust env loader to handle differences between local and VM
 const fs = require('fs');

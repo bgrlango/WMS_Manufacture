@@ -5,7 +5,7 @@
 -- Purpose: Menambahkan tabel yang dibutuhkan untuk ERP system lengkap
 -- ====================================================================
 
-USE cloudtle;
+USE bgrlango;
 
 -- ====================================================================
 -- PHASE 1: CRITICAL DATABASE FIXES
