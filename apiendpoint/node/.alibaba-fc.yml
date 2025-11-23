@@ -1,0 +1,428 @@
+# Alibaba Cloud Function Compute Configuration
+# Location: .alibaba-fc.yml or .alibaba-fc/config.yml
+# Used by: fc (Function Compute CLI), fun (Alibaba Serverless Framework), Terraform
+
+region: ap-southeast-5
+account_id: ${ALIBABA_ACCOUNT_ID}
+
+# Service Configuration
+service:
+  name: wms-manufacturing
+  description: WMS Manufacturing System - CQRS Command Service
+  log_config:
+    log_store: wms-command-logs
+    project: wms-project
+    enable_request_metrics: true
+  
+  vpc_config:
+    vpc_id: ${VPC_ID}
+    security_group_id: ${SECURITY_GROUP_ID}
+    subnet_ids:
+      - ${SUBNET_ID}
+  
+  internet_access: true
+  role_arn: acs:ram::${ALIBABA_ACCOUNT_ID}:role/fc_basic_execution_role
+  
+  tags:
+    Project: WMS
+    Service: CommandService
+    Environment: ${ENVIRONMENT:-production}
+
+# Function Configuration
+function:
+  name: command-service
+  description: CQRS Command Service - handles all write operations
+  
+  # Runtime
+  runtime: custom
+  handler: function-compute-handler.handler
+  
+  # Resource Allocation
+  memory: 1024                          # MB (256-3072)
+  timeout: 300                          # seconds (1-900)
+  ephemeral_storage: 512                # MB
+  
+  # Code
+  code:
+    image_uri: ${IMAGE_URI}
+    # Alternative: local directory
+    # type: oss
+    # bucket: wms-function-code
+    # key: command-service.zip
+  
+  # Environment Variables
+  environment_variables:
+    NODE_ENV: ${ENVIRONMENT:-production}
+    
+    # Database Configuration
+    DB_HOST: ${DB_HOST}
+    DB_PORT: ${DB_PORT:-3306}
+    DB_USER: ${DB_USER}
+    DB_PASSWORD: ${DB_PASSWORD}
+    DB_NAME: ${DB_NAME:-wms_manufacture}
+    DB_DIALECT: mysql
+    DB_POOL_MIN: '1'
+    DB_POOL_MAX: '10'
+    DB_CONNECTION_TIMEOUT: '30000'
+    DB_IDLE_TIMEOUT: '10000'
+    
+    # Authentication
+    JWT_SECRET: ${JWT_SECRET}
+    JWT_EXPIRY: '24h'
+    
+    # CORS Configuration
+    CORS_ORIGIN: ${CORS_ORIGIN}
+    CORS_CREDENTIALS: 'true'
+    
+    # Logging
+    LOG_LEVEL: ${LOG_LEVEL:-info}
+    ENABLE_REQUEST_LOGGING: 'true'
+    ENABLE_PERFORMANCE_METRICS: 'true'
+    LOG_RETENTION_DAYS: '30'
+    
+    # Function Compute Specific
+    FC_FUNCTION_NAME: command-service
+    FC_SERVICE_NAME: wms-manufacturing
+    FC_REQUEST_TIMEOUT: '300000'        # ms
+    FC_LOG_TYPE: tail                   # Tail or None
+  
+  # Custom Initialization
+  initializer: null                      # Optional initialization handler
+  initializer_timeout: 60
+  
+  # Cold Start Optimization
+  keep_alive: true                       # Keep instance warm
+  
+  # Tags
+  tags:
+    Function: command-service
+    CQRS: command-side
+    Tier: api
+
+# Trigger Configuration
+triggers:
+  # HTTP Trigger for RESTful API
+  - name: http-trigger
+    type: http
+    properties:
+      methods:
+        - GET
+        - POST
+        - PUT
+        - DELETE
+        - PATCH
+      auth_type: anonymous               # or 'function' for JWT validation
+      qualifier: LATEST                  # Function version
+      cors:
+        allow_origins:
+          - ${CORS_ORIGIN}
+        allow_methods:
+          - GET
+          - POST
+          - PUT
+          - DELETE
+          - PATCH
+        allow_headers:
+          - Content-Type
+          - Authorization
+          - X-Requested-With
+        expose_headers:
+          - X-Request-Id
+          - X-Response-Time
+        allow_credentials: true
+        max_age: 86400
+    enabled: true
+  
+  # Async Event Trigger (Optional)
+  - name: async-event-trigger
+    type: async
+    properties:
+      qualifier: LATEST
+      max_async_event_age_in_seconds: 3600
+      max_async_retry_attempts: 2
+      destination_config:
+        on_failure:
+          destination: acs:fc:::orders_dead_letter_queue
+    enabled: ${ENABLE_ASYNC_TRIGGERS:-false}
+
+# Provisioned Concurrency Configuration
+provisioned_concurrency:
+  enabled: ${ENABLE_PROVISIONED_CONCURRENCY:-true}
+  concurrent_executions: 10              # Keep 10 instances warm
+  on_demand_current: 0
+
+# Auto-scaling Configuration
+auto_scaling:
+  enabled: true
+  max_concurrent_executions: 100        # Maximum scaling limit
+  target_utilization: 70                 # Scale when 70% utilized
+  scale_up_cool_down_seconds: 60
+  scale_down_cool_down_seconds: 600
+
+# Monitoring & Alerting
+monitoring:
+  metrics_enabled: true
+  metrics_period_seconds: 60
+  
+  alarms:
+    # Error Rate Alarm
+    - name: high-error-rate
+      metric_name: FunctionErrors
+      statistics: Sum
+      period: 300
+      threshold: 10
+      comparison_operator: GreaterThanThreshold
+      evaluation_periods: 1
+      alarm_actions:
+        - sms                            # SMS alert
+        - email                          # Email alert
+    
+    # High Duration Alarm
+    - name: high-duration
+      metric_name: FunctionDuration
+      statistics: Average
+      period: 300
+      threshold: 10000                   # milliseconds
+      comparison_operator: GreaterThanThreshold
+      evaluation_periods: 2
+    
+    # Out of Memory Alarm
+    - name: memory-pressure
+      metric_name: MemoryUtilization
+      statistics: Maximum
+      period: 300
+      threshold: 80                      # Percentage
+      comparison_operator: GreaterThanThreshold
+      evaluation_periods: 1
+
+# Deployment Configuration
+deployment:
+  # Stack name in Alibaba CloudFormation
+  stack_name: wms-manufacturing-stack
+  
+  # Stack tags
+  stack_tags:
+    Project: WMS
+    CostCenter: Manufacturing
+    Owner: DevOps
+  
+  # Update behavior
+  update_strategy: UPDATE               # CREATE | UPDATE | DELETE
+  wait_stack_creation_complete: true
+  disable_rollback: false
+  
+  # Capability requirements
+  capabilities:
+    - CAPABILITY_IAM
+    - CAPABILITY_NAMED_IAM
+    - CAPABILITY_AUTO_EXPAND
+
+# Local Development Configuration
+local:
+  port: 9000                            # Port for local testing
+  host: 127.0.0.1
+  docker_image: node:18-alpine          # Base image for local emulation
+  debug_port: 9229                      # Node.js debug port
+  
+  # Local database credentials
+  db_host: localhost
+  db_port: 3306
+  db_user: root
+  db_password: ${LOCAL_DB_PASSWORD}
+  
+  # Enable debugging
+  debug: ${DEBUG:-false}
+  debug_break_on_start: false
+
+# CI/CD Configuration
+cicd:
+  # GitHub Actions
+  github:
+    enabled: true
+    workflow_file: .github/workflows/deploy-fc.yml
+    trigger_on_push_to:
+      - main
+      - production
+  
+  # GitLab CI
+  gitlab:
+    enabled: false
+    pipeline_file: .gitlab-ci.yml
+  
+  # Alibaba CloudCI
+  cloudci:
+    enabled: true
+    pipeline_name: wms-command-service-pipeline
+
+# Rollback Configuration
+rollback:
+  enabled: true
+  keep_previous_versions: 5
+  auto_rollback_on_errors: true
+  rollback_on_alarm: true
+
+# Logging Configuration
+logging:
+  # Function logs to SLS (Simple Log Service)
+  sls:
+    project: wms-project
+    log_store: wms-command-logs
+    enabled: true
+  
+  # Request ID tracking
+  request_id_header: X-Request-Id
+  
+  # Performance profiling
+  enable_profiling: ${ENABLE_PROFILING:-false}
+  profile_directory: /tmp/profiles
+
+# Backup & Disaster Recovery
+backup:
+  enabled: true
+  backup_frequency: daily               # daily | weekly | monthly
+  backup_retention_days: 30
+  backup_location: oss://wms-backups/fc/
+
+# Cost Optimization
+cost_optimization:
+  # Memory optimization
+  recommend_memory: true
+  memory_analysis_enabled: true
+  
+  # Execution duration optimization
+  duration_analysis_enabled: true
+  
+  # Reserved capacity analysis
+  reserved_concurrency_analysis_enabled: true
+
+# Network Configuration
+network:
+  # Outbound traffic
+  nat_gateway_id: ${NAT_GATEWAY_ID}
+  
+  # API Gateway integration
+  api_gateway:
+    enabled: false
+    group_name: wms-command-api
+    api_name: wms-command-api
+    api_stage: RELEASE
+
+# Security Configuration
+security:
+  # Secret management
+  secrets_manager:
+    enabled: true
+    # Store DB password in Alibaba Secrets Manager
+    secrets:
+      DB_PASSWORD: acs:secretsmanager:secret/wms/db-password
+      JWT_SECRET: acs:secretsmanager:secret/wms/jwt-secret
+  
+  # Key management
+  kms_enabled: true
+  kms_key_id: ${KMS_KEY_ID}
+  
+  # Code signing
+  code_signing_enabled: false
+
+# Performance Tuning
+performance:
+  # Connection pool
+  db_pool_size_min: 1
+  db_pool_size_max: 10
+  
+  # Request handling
+  request_body_max_size: 10485760       # 10 MB
+  timeout_buffer_ms: 5000               # Buffer before function timeout
+  
+  # Caching
+  enable_caching: true
+  cache_ttl_seconds: 300
+
+---
+
+# Environment-Specific Overrides
+
+# Development Environment
+development:
+  region: ap-southeast-5
+  function:
+    memory: 256                         # Lower memory in dev
+    timeout: 60
+    environment_variables:
+      NODE_ENV: development
+      LOG_LEVEL: debug
+      ENABLE_PROFILING: 'true'
+  
+  provisioned_concurrency:
+    enabled: false                      # No cost optimization in dev
+  
+  monitoring:
+    metrics_enabled: false
+
+# Staging Environment
+staging:
+  region: ap-southeast-5
+  function:
+    memory: 512                         # Medium memory
+    timeout: 120
+  
+  provisioned_concurrency:
+    enabled: true
+    concurrent_executions: 5
+  
+  monitoring:
+    metrics_enabled: true
+
+# Production Environment
+production:
+  region: ap-southeast-5
+  function:
+    memory: 1024                        # Full memory
+    timeout: 300
+    environment_variables:
+      LOG_LEVEL: info
+  
+  provisioned_concurrency:
+    enabled: true
+    concurrent_executions: 20           # More warm instances
+  
+  monitoring:
+    metrics_enabled: true
+    alarms:
+      - error-rate-critical
+      - duration-critical
+      - memory-critical
+  
+  auto_scaling:
+    max_concurrent_executions: 200      # Higher scaling limit
+  
+  backup:
+    backup_frequency: daily
+    backup_retention_days: 90           # Longer retention
+
+# Emergency/Disaster Recovery
+emergency:
+  region: ap-northeast-1                # Different region
+  function:
+    memory: 1024
+    timeout: 300
+  
+  provisioned_concurrency:
+    enabled: true
+    concurrent_executions: 50           # Max readiness
+  
+  auto_scaling:
+    max_concurrent_executions: 500
+
+---
+
+# Notes
+# 1. All ${} placeholders must be replaced with actual values
+# 2. Environment variables can be set via:
+#    - Command line: fc config set VARIABLE_NAME value
+#    - .env file (use direnv or similar)
+#    - GitHub Secrets (for CI/CD)
+#    - Alibaba Cloud Secrets Manager
+# 3. For production, never commit actual credentials to repository
+# 4. Use Alibaba Cloud RAM roles instead of access keys when possible
+# 5. Regular backups and disaster recovery tests are recommended

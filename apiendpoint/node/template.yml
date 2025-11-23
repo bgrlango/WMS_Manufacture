@@ -1,0 +1,81 @@
+ROSVersion: '2015-06-01'
+Description: 'WMS Manufacturing System - Command Service'
+Parameters:
+  RegionParam:
+    Type: String
+    Default: 'ap-southeast-5'
+    Description: 'Alibaba Cloud region (ap-southeast-5 for Jakarta, ap-southeast-1 for Singapore)'
+
+Resources:
+  WMSCommandFunction:
+    Type: 'Aliyun::FC::Function'
+    Properties:
+      ServiceName: !Sub '${AWS::StackName}-service'
+      FunctionName: 'wms-command-service'
+      Handler: 'function-compute-handler.handler'
+      Runtime: 'custom'
+      CodeUri: './'
+      MemorySize: 1024
+      Timeout: 300
+      Environment:
+        Variables:
+          DB_HOST: !Ref DBHost
+          DB_PORT: '3306'
+          DB_USER: !Ref DBUser
+          DB_PASSWORD: !Ref DBPassword
+          DB_NAME: 'wms_manufacture'
+          NODE_ENV: 'production'
+      VpcConfig:
+        VpcId: !Ref VpcId
+        SecurityGroupId: !Ref SecurityGroupId
+        SubnetIds:
+          - !Ref SubnetId
+      Policies:
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: 'Allow'
+              Action:
+                - 'rds:*'
+                - 'vpc:*'
+              Resource: '*'
+
+  WMSCommandHttpTrigger:
+    Type: 'Aliyun::FC::Trigger'
+    Properties:
+      ServiceName: !Sub '${AWS::StackName}-service'
+      FunctionName: 'wms-command-service'
+      TriggerName: 'http-trigger'
+      TriggerType: 'HTTP'
+      TriggerConfig:
+        Methods:
+          - 'POST'
+          - 'PUT'
+          - 'DELETE'
+          - 'PATCH'
+          - 'GET'
+
+Parameters:
+  DBHost:
+    Type: String
+    Description: 'RDS MySQL host'
+    
+  DBUser:
+    Type: String
+    Description: 'Database username'
+    
+  DBPassword:
+    Type: String
+    NoEcho: true
+    Description: 'Database password'
+    
+  VpcId:
+    Type: String
+    Description: 'VPC ID'
+    
+  SecurityGroupId:
+    Type: String
+    Description: 'Security Group ID'
+    
+  SubnetId:
+    Type: String
+    Description: 'Subnet ID'

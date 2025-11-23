@@ -1,0 +1,375 @@
+ROSTemplateFormatVersion: '2015-06-01'
+Description: 'WMS Manufacturing - Command Service on Alibaba Cloud Function Compute'
+
+# Input parameters for deployment
+Parameters:
+  ServiceName:
+    Type: String
+    Default: wms-manufacturing
+    Description: Function Compute service name
+
+  FunctionName:
+    Type: String
+    Default: command-service
+    Description: Function Compute function name
+
+  DBHost:
+    Type: String
+    NoEcho: true
+    Description: RDS MySQL database host
+
+  DBPort:
+    Type: Number
+    Default: 3306
+    Description: RDS MySQL database port
+
+  DBUser:
+    Type: String
+    NoEcho: true
+    Description: Database username
+
+  DBPassword:
+    Type: String
+    NoEcho: true
+    Description: Database password
+
+  DBName:
+    Type: String
+    Default: wms_manufacture
+    Description: Database name
+
+  VpcId:
+    Type: String
+    Description: VPC ID for Function Compute
+
+  SecurityGroupId:
+    Type: String
+    Description: Security group ID for Function Compute
+
+  SubnetId:
+    Type: String
+    Description: VSwitch subnet ID for Function Compute
+
+  ImageUri:
+    Type: String
+    Default: registry.ap-southeast-5.aliyuncs.com/wms/command-runtime:latest
+    Description: Container image URI for custom runtime
+
+  JwtSecret:
+    Type: String
+    NoEcho: true
+    Description: JWT secret key for authentication
+
+  CorsOrigin:
+    Type: String
+    Default: 'https://your-domain.com'
+    Description: CORS allowed origin
+
+  MemorySize:
+    Type: Number
+    Default: 1024
+    MinValue: 256
+    MaxValue: 3072
+    Description: Memory size in MB
+
+  Timeout:
+    Type: Number
+    Default: 300
+    MinValue: 1
+    MaxValue: 900
+    Description: Function timeout in seconds
+
+  Environment:
+    Type: String
+    Default: production
+    AllowedValues:
+      - development
+      - staging
+      - production
+    Description: Deployment environment
+
+# Outputs
+Outputs:
+  ServiceArn:
+    Description: Function Compute service ARN
+    Value:
+      Fn::GetAtt:
+        - WMSCommandService
+        - ServiceArn
+
+  FunctionArn:
+    Description: Function Compute function ARN
+    Value:
+      Fn::GetAtt:
+        - WMSCommandFunction
+        - FunctionArn
+
+  HttpTriggerUrl:
+    Description: HTTP trigger endpoint URL
+    Value:
+      Fn::Sub: 'https://${ServiceId}.${Region}.fc.aliyuncs.com/api/command'
+
+  DashboardUrl:
+    Description: Alibaba Cloud Console dashboard URL
+    Value:
+      Fn::Sub: 'https://fc.console.aliyun.com/fc/services/${WMSCommandService}/functions/${WMSCommandFunction}'
+
+# Resource definitions
+Resources:
+  # ===== Function Compute Service =====
+  WMSCommandService:
+    Type: Aliyun::FC::Service
+    Properties:
+      ServiceName:
+        Ref: ServiceName
+      Description: WMS Manufacturing Command Service for production order management
+      LogConfig:
+        LogStore: wms-command-logs
+        Project: wms-project
+        EnableRequestMetrics: true
+      VpcConfig:
+        VpcId:
+          Ref: VpcId
+        SecurityGroupId:
+          Ref: SecurityGroupId
+        SubnetIds:
+          - Ref: SubnetId
+      InternetAccess: true
+      RoleArn: acs:ram::ACCOUNT_ID:role/fc_basic_execution_role
+      Tags:
+        Project: WMS
+        Service: CommandService
+        Environment:
+          Ref: Environment
+
+  # ===== Function Compute Function =====
+  WMSCommandFunction:
+    Type: Aliyun::FC::Function
+    Properties:
+      ServiceName:
+        Ref: WMSCommandService
+      FunctionName:
+        Ref: FunctionName
+      Runtime: custom
+      Handler: function-compute-handler.handler
+      Timeout:
+        Ref: Timeout
+      MemorySize:
+        Ref: MemorySize
+      EphemeralStorage: 512
+      Description: CQRS Command Service handling production orders, QC, warehouse, and delivery operations
+      Code:
+        ImageUri:
+          Ref: ImageUri
+      EnvironmentVariables:
+        DB_HOST:
+          Ref: DBHost
+        DB_PORT:
+          Ref: DBPort
+        DB_USER:
+          Ref: DBUser
+        DB_PASSWORD:
+          Ref: DBPassword
+        DB_NAME:
+          Ref: DBName
+        DB_DIALECT: mysql
+        NODE_ENV:
+          Ref: Environment
+        JWT_SECRET:
+          Ref: JwtSecret
+        CORS_ORIGIN:
+          Ref: CorsOrigin
+        LOG_LEVEL: info
+        FC_FUNCTION_NAME:
+          Ref: FunctionName
+        FC_SERVICE_NAME:
+          Ref: ServiceName
+        ENABLE_REQUEST_LOGGING: 'true'
+        ENABLE_PERFORMANCE_METRICS: 'true'
+      PreserveOnDelete: false
+      Tags:
+        Function: command-service
+        CQRS: command-side
+
+  # ===== HTTP Trigger =====
+  WMSCommandHttpTrigger:
+    Type: Aliyun::FC::Trigger
+    Properties:
+      ServiceName:
+        Ref: WMSCommandService
+      FunctionName:
+        Fn::GetAtt:
+          - WMSCommandFunction
+          - FunctionName
+      TriggerName: http-trigger
+      TriggerType: http
+      TriggerConfig:
+        Methods:
+          - GET
+          - POST
+          - PUT
+          - DELETE
+          - PATCH
+        AuthType: anonymous
+        Qualifier: LATEST
+      Description: HTTP trigger for RESTful API endpoints
+
+  # ===== Async Event Trigger (Optional) =====
+  WMSCommandAsyncTrigger:
+    Type: Aliyun::FC::Trigger
+    Condition: EnableAsyncTriggers
+    Properties:
+      ServiceName:
+        Ref: WMSCommandService
+      FunctionName:
+        Fn::GetAtt:
+          - WMSCommandFunction
+          - FunctionName
+      TriggerName: async-event-trigger
+      TriggerType: sls_push
+      TriggerConfig:
+        SourceArn: acs:log:REGION:ACCOUNT_ID:project/wms-project
+        LogConfig:
+          Project: wms-project
+          LogStore: wms-events
+        FunctionParameter:
+          '{}'
+        Enabled: true
+      Description: Async event trigger for production order events
+
+  # ===== CloudWatch/CloudMonitor Rules =====
+  WMSCommandMetricsAlarm:
+    Type: Aliyun::CloudMonitor::Alarm
+    Properties:
+      AlarmName: wms-command-service-errors
+      MetricName: FunctionErrors
+      Namespace: acs/fc
+      Statistics: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 10
+      ComparisonOperator: GreaterThanThreshold
+      Dimensions:
+        - Name: ServiceName
+          Value:
+            Ref: ServiceName
+        - Name: FunctionName
+          Value:
+            Ref: FunctionName
+      AlarmActions:
+        - acs:cloudmonitor:REGION:ACCOUNT_ID:notificationChannel/sms/wms-alerts
+      TreatMissingData: NotBreaching
+
+  # ===== Reserved Concurrency Configuration =====
+  WMSCommandReservedConcurrency:
+    Type: Aliyun::FC::ProvisionedConcurrencyConfig
+    Properties:
+      ServiceName:
+        Ref: WMSCommandService
+      FunctionName:
+        Fn::GetAtt:
+          - WMSCommandFunction
+          - FunctionName
+      ProvisionedConcurrentExecutions: 10
+      Qualifier: LATEST
+      Description: Reserved capacity for production stability
+
+  # ===== API Gateway Integration (Optional) =====
+  WMSCommandApiGroup:
+    Type: Aliyun::ApiGateway::Group
+    Condition: EnableApiGateway
+    Properties:
+      GroupName: wms-command-api
+      Description: API Gateway for WMS Command Service
+      InstanceType: vpc
+
+  WMSCommandApi:
+    Type: Aliyun::ApiGateway::Api
+    Condition: EnableApiGateway
+    Properties:
+      GroupId:
+        Ref: WMSCommandApiGroup
+      ApiName: wms-command-api
+      Visibility: PRIVATE
+      ServiceConfig:
+        ServiceType: FC
+        ServiceProtocol: HTTP
+        ServiceAddress: wms-manufacturing/command-service
+        ServiceVpcEnable: true
+      RequestConfig:
+        RequestHttpMethod: ANY
+        RequestPath: /api/command/*
+
+Conditions:
+  EnableAsyncTriggers:
+    Fn::Equals:
+      - Ref: Environment
+      - production
+
+  EnableApiGateway:
+    Fn::Equals:
+      - Ref: Environment
+      - production
+
+# Metadata for CLI
+Metadata:
+  Manifest:
+    Version: '1.0'
+    Services:
+      - ServiceName: wms-manufacturing
+        Functions:
+          - FunctionName: command-service
+            Handler: function-compute-handler.handler
+            Runtime: custom
+            Policies:
+              - Version: '1'
+                Statement:
+                  - Effect: Allow
+                    Action:
+                      - 'fc:InvokeFunction'
+                    Resource:
+                      - 'acs:fc:*:*:services/wms-manufacturing/functions/command-service'
+                  - Effect: Allow
+                    Action:
+                      - 'rds:*'
+                    Resource:
+                      - 'acs:rds:*:*:db/*'
+                  - Effect: Allow
+                    Action:
+                      - 'logs:*'
+                    Resource:
+                      - 'acs:log:*:*:project/wms-project'
+            VpcConfig:
+              VpcId:
+                Ref: VpcId
+              SecurityGroupId:
+                Ref: SecurityGroupId
+              SubnetIds:
+                - Ref: SubnetId
+
+# Deployment instructions
+Instructions: |
+  # Deployment Steps:
+  
+  1. Prepare environment variables:
+     export ALIBABA_REGION=ap-southeast-5
+     export ALIBABA_ACCESS_KEY_ID=<your-key-id>
+     export ALIBABA_ACCESS_KEY_SECRET=<your-key-secret>
+  
+  2. Deploy stack:
+     aliyun fc create-stack -t template.yml \
+       --parameter-overrides \
+       DBHost=<rds-endpoint> \
+       DBUser=<db-user> \
+       DBPassword=<db-password> \
+       VpcId=<vpc-id> \
+       SecurityGroupId=<sg-id> \
+       SubnetId=<subnet-id> \
+       ImageUri=<registry-uri>
+  
+  3. Verify deployment:
+     aliyun fc get-service --service-name wms-manufacturing
+     aliyun fc get-function --service-name wms-manufacturing --function-name command-service
+  
+  4. Test endpoint:
+     curl -X GET https://<function-id>.ap-southeast-5.fc.aliyuncs.com/api/command/health
