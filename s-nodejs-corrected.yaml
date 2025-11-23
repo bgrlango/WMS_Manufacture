@@ -1,0 +1,96 @@
+edition: 3.0.0
+name: wms-nodejs-command-service
+access: default
+
+resources:
+  commandService:
+    component: fc3
+    props:
+      region: ap-southeast-5
+      
+      # Function metadata
+      functionName: nodejs-command-service
+      description: "WMS Manufacturing - Node.js Command Service (CQRS Write Operations)"
+      
+      # Runtime configuration
+      runtime: custom.debian10
+      handler: bootstrap.handler                    # ✅ CORRECTED: Export from bootstrap.js
+      
+      # Resource allocation
+      cpu: 0.5
+      memorySize: 512
+      diskSize: 512
+      timeout: 30                                   # Increased from 20 to 30
+      instanceConcurrency: 2
+      
+      # Custom runtime configuration - CRITICAL
+      customRuntimeConfig:
+        port: 9000
+        command:
+          - node                                    # ✅ CORRECTED: Direct Node.js, not npm
+          - bootstrap.js                            # ✅ Entry point file
+      
+      # Code location
+      code: ./runtime                               # Maps to /code in FC container
+      
+      # Environment variables - Corrected for Debian10
+      environmentVariables:
+        # Node.js paths
+        PATH: /usr/local/bin:/usr/bin:/bin:/opt/bin:/code:/code/bin
+        NODE_PATH: /code/node_modules
+        LD_LIBRARY_PATH: /code/lib:/usr/lib:/opt/lib:/usr/local/lib
+        
+        # Application
+        NODE_ENV: production
+        PORT: "9000"
+        HOST: "0.0.0.0"
+        
+        # Function Compute
+        FC_FUNCTION_NAME: nodejs-command-service
+        FC_PORT: "9000"
+        
+        # Database (RDS MySQL in VPC)
+        # DB_HOST: "your-rds.ap-southeast-5.rds.aliyuncs.com"
+        # DB_PORT: "3306"
+        # DB_USER: "root"
+        # DB_NAME: "wms_manufacture"
+      
+      # Logging configuration
+      logConfig:
+        enableRequestMetrics: true
+        enableInstanceMetrics: true
+        logBeginRule: DefaultRegex
+        enableCustomExtraLog: true
+      
+      # Network
+      internetAccess: true
+      instanceIsolationMode: SHARE
+      sessionAffinity: NONE
+      
+      # Performance
+      disableOndemand: false
+      alwaysAllocateCPU: false
+      
+      # Auto-scaling
+      provisionConfig:
+        defaultTarget: 1
+        alwaysAllocateCPU: false
+        alwaysAllocateGPU: false
+      
+      # HTTP Trigger - All methods for CQRS command operations
+      triggers:
+        - triggerName: httpTrigger
+          description: "HTTP trigger for command operations"
+          triggerType: http
+          qualifier: LATEST
+          triggerConfig:
+            methods:
+              - GET                                 # Health check
+              - POST                                # Create operations
+              - PUT                                 # Update operations
+              - DELETE                              # Delete operations
+              - HEAD
+              - OPTIONS
+              - PATCH
+            authType: anonymous
+            disableURLInternet: false
