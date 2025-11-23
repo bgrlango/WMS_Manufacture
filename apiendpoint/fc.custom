@@ -1,7 +1,12 @@
-"""
-FastAPI custom runtime configuration
-Specifies the Python version and entry point
-"""
+# FastAPI custom runtime configuration
+# Specifies the Python version and entry point
 
 RUNTIME python39
-ENTRYPOINT /code/bootstrap.py
+
+# Entry point with dynamic path resolution
+ENTRYPOINT python /code/bootstrap.py
+
+# Environment variables for bootstrap
+ENV CODE_DIR=/code
+ENV PYTHONPATH=/code
+ENV PYTHONUNBUFFERED=1

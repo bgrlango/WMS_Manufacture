@@ -7,6 +7,27 @@
 
 ---
 
+## 🆘 CRITICAL FIX - Bootstrap Path Issue
+
+### Problem
+If you see: `python: can't open file '/code/bootstrap.py': [Errno 2] No such file or directory`
+
+### Solution (ALREADY APPLIED)
+1. ✅ bootstrap.py now uses dynamic path resolution (CODE_DIR env var)
+2. ✅ Dockerfile.custom includes verification step: `RUN if [ ! -f /code/bootstrap.py ]...`
+3. ✅ ENTRYPOINT uses absolute path with Python unbuffered: `["python", "-u", "/code/bootstrap.py"]`
+4. ✅ fc.custom exports CODE_DIR and PYTHONPATH environment variables
+
+### To Verify Fixes Worked
+```bash
+# Test Docker locally before deploying
+cd apiendpoint
+./test_docker.sh          # Linux/Mac
+test_docker.bat          # Windows
+```
+
+---
+
 ## 📋 Quick Start
 
 ### Prerequisites
@@ -461,6 +482,77 @@ jobs:
           aliyun fc create-stack \
             --template-file apiendpoint/template.yml \
             --parameter-overrides ImageUri=...
+```
+
+---
+
+## 🧪 Debugging Bootstrap Issues
+
+### Local Diagnosis
+```bash
+# Test Docker image
+docker build -f Dockerfile.custom -t wms-query:test .
+
+# Check if bootstrap.py exists
+docker run --rm wms-query:test ls -la /code/bootstrap.py
+
+# List entire /code directory
+docker run --rm wms-query:test ls -la /code/
+
+# Run diagnostic script
+docker run --rm wms-query:test python scripts/diagnose_bootstrap.py
+
+# Try to start and see errors
+docker run --rm -p 9000:9000 wms-query:test
+```
+
+### Common Issues & Fixes
+
+**Issue 1: `/code/bootstrap.py: No such file or directory`**
+- **Cause:** Dockerfile COPY command failed silently
+- **Fix:** Check Dockerfile.custom - ensure all COPY commands have full paths
+- **Verify:** `docker run --rm wms-query:test ls -la /code/`
+
+**Issue 2: Module import errors (app.main not found)**
+- **Cause:** sys.path or PYTHONPATH not set correctly
+- **Fix:** Verify these env vars in Dockerfile:
+  ```dockerfile
+  ENV CODE_DIR=/code
+  ENV PYTHONPATH=/code:/code/app
+  ```
+- **Test:** `docker run --rm -e PYTHONPATH=/code wms-query:test python -c "from app.main import app; print('OK')"`
+
+**Issue 3: Port not exposed/not listening**
+- **Cause:** Uvicorn binding to wrong host/port
+- **Fix:** Check bootstrap.py has:
+  ```python
+  host = os.environ.get('FC_HOST', '0.0.0.0')
+  port = int(os.environ.get('FC_PORT', 9000))
+  ```
+- **Test:** `curl http://localhost:9000/health`
+
+**Issue 4: Requirements not installed**
+- **Cause:** requirements.txt not in Docker build context
+- **Fix:** Run from apiendpoint directory: `docker build -f Dockerfile.custom .`
+- **Verify:** `docker run --rm wms-query:test pip list | grep fastapi`
+
+### Debug Mode in Function Compute
+```bash
+# Set debug environment in .alibaba-fc.yml or FC console
+FC_LOG_LEVEL=debug
+PYTHONUNBUFFERED=1
+PYTHONDONTWRITEBYTECODE=1
+```
+
+### View Function Logs
+```bash
+# Using Alibaba CLI
+aliyun fc get-function-logs \
+  --service-name query-service \
+  --function-name query-service \
+  --start-time <timestamp>
+
+# Or in Alibaba Console: Services → query-service → Functions → query-service → Logs
 ```
 
 ---
